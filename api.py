@@ -2,12 +2,15 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import os
 
+# Caminho para o arquivo mock.json
 arquivo_mock = os.path.join(os.path.dirname(__file__), 'mock.json')
 
+# Função para ler o conteúdo do mock.json
 def read_mock(arquivo):
     with open(arquivo, 'r', encoding='utf-8') as arq:
         return json.load(arq)
 
+# Definindo a classe do request handler
 class SimpleRequestHandler(BaseHTTPRequestHandler):
 
     def _set_response(self, response_code=200, content_type='application/json'):
@@ -31,7 +34,7 @@ class SimpleRequestHandler(BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data)
             
-            # Processa os dados aqui
+            # Processando os dados recebidos
             response = {'received': data}
             self._set_response()
             self.wfile.write(json.dumps(response).encode('utf-8'))
@@ -40,6 +43,7 @@ class SimpleRequestHandler(BaseHTTPRequestHandler):
             response = {'error': 'Not Found'}
             self.wfile.write(json.dumps(response).encode('utf-8'))
 
+# Função handler para o Vercel
 def handler(event, context):
     if event['httpMethod'] == 'GET':
         if event['path'] == '/':
@@ -87,6 +91,7 @@ def handler(event, context):
 
     return response
 
+# Executando o servidor localmente
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 8000))
     server_address = ('', port)
