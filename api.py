@@ -1,5 +1,5 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import json
+import json, os
 
 arquivo_mock = '/home/david/Documentos/projetos/sebrae/api_teste/mock.json'
 
@@ -40,7 +40,7 @@ class SimpleRequestHandler(BaseHTTPRequestHandler):
             response = {'error': 'Not Found'}
             self.wfile.write(json.dumps(response).encode('utf-8'))
 
-def run(server_class=HTTPServer, handler_class=SimpleRequestHandler, port=8000):
+def run(server_class=HTTPServer, handler_class=SimpleRequestHandler, port=int(os.getenv('PORT', 8000))):
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
     print(f'Starting server on port {port}...')
