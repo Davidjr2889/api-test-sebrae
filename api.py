@@ -1,12 +1,12 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import json, os
+from http.server import BaseHTTPRequestHandler
+import json
+import os
 
 arquivo_mock = os.path.join(os.path.dirname(__file__), 'mock.json')
 
 def read_mock(arquivo):
     with open(arquivo, 'r', encoding='utf-8') as arq:
         return json.load(arq)
-
 
 class SimpleRequestHandler(BaseHTTPRequestHandler):
 
@@ -40,11 +40,49 @@ class SimpleRequestHandler(BaseHTTPRequestHandler):
             response = {'error': 'Not Found'}
             self.wfile.write(json.dumps(response).encode('utf-8'))
 
-def run(server_class=HTTPServer, handler_class=SimpleRequestHandler, port=int(os.getenv('PORT', 8000))):
-    server_address = ('', port)
-    httpd = server_class(server_address, handler_class)
-    print(f'Starting server on port {port}...')
-    httpd.serve_forever()
+def handler(event, context):
+    if event['httpMethod'] == 'GET':
+        if event['path'] == '/':
+            response = {
+                'statusCode': 200,
+                'body': json.dumps(read_mock(arquivo_mock)),
+                'headers': {
+                    'Content-Type': 'application/json'
+                }
+            }
+        else:
+            response = {
+                'statusCode': 404,
+                'body': json.dumps({'error': 'Not Found'}),
+                'headers': {
+                    'Content-Type': 'application/json'
+                }
+            }
+    elif event['httpMethod'] == 'POST':
+        if event['path'] == '/data':
+            data = json.loads(event['body'])
+            response = {
+                'statusCode': 200,
+                'body': json.dumps({'received': data}),
+                'headers': {
+                    'Content-Type': 'application/json'
+                }
+            }
+        else:
+            response = {
+                'statusCode': 404,
+                'body': json.dumps({'error': 'Not Found'}),
+                'headers': {
+                    'Content-Type': 'application/json'
+                }
+            }
+    else:
+        response = {
+            'statusCode': 405,
+            'body': json.dumps({'error': 'Method Not Allowed'}),
+            'headers': {
+                'Content-Type': 'application/json'
+            }
+        }
 
-if __name__ == '__main__':
-    run()
+    return response
