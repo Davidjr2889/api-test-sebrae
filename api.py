@@ -1,4 +1,4 @@
-from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import os
 
@@ -41,35 +41,46 @@ class SimpleRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode('utf-8'))
 
 def handler(event, context):
+    # Mock the required attributes and methods for the request handler
     class FakeServer:
         def __init__(self, method, path, body):
             self.method = method
             self.path = path
             self.body = body
+            self.headers = {}
+            self.wfile = ""
 
         def makefile(self, *args, **kwargs):
             return self
 
         def readline(self):
-            return self.body
+            return self.body.encode('utf-8')
 
     class FakeRequestHandler(SimpleRequestHandler):
         def __init__(self, request, client_address, server):
-            self.rfile = FakeServer(event['httpMethod'], event['path'], event.get('body', ''))
+            self.rfile = request
             self.wfile = server
             self.client_address = client_address
             self.server = server
-            self.headers = event.get('headers', {})
+            self.headers = {}
 
-    server = FakeServer(event['httpMethod'], event['path'], event.get('body', ''))
-    handler_instance = FakeRequestHandler(server, None, None)
+    fake_server = FakeServer(event['httpMethod'], event['path'], event.get('body', ''))
+    handler_instance = FakeRequestHandler(fake_server, None, None)
 
     if event['httpMethod'] == 'GET':
         handler_instance.do_GET()
     elif event['httpMethod'] == 'POST':
         handler_instance.do_POST()
 
-    return server.wfile
+    response = {
+        'statusCode': 200,
+        'headers': {
+            'Content-Type': 'application/json'
+        },
+        'body': handler_instance.wfile
+    }
+
+    return response
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 8000))
