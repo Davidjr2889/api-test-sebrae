@@ -41,48 +41,39 @@ class SimpleRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode('utf-8'))
 
 def handler(event, context):
-    if event['httpMethod'] == 'GET':
-        if event['path'] == '/':
-            response = {
-                'statusCode': 200,
-                'body': json.dumps(read_mock(arquivo_mock)),
-                'headers': {
-                    'Content-Type': 'application/json'
-                }
-            }
-        else:
-            response = {
-                'statusCode': 404,
-                'body': json.dumps({'error': 'Not Found'}),
-                'headers': {
-                    'Content-Type': 'application/json'
-                }
-            }
-    elif event['httpMethod'] == 'POST':
-        if event['path'] == '/data':
-            data = json.loads(event['body'])
-            response = {
-                'statusCode': 200,
-                'body': json.dumps({'received': data}),
-                'headers': {
-                    'Content-Type': 'application/json'
-                }
-            }
-        else:
-            response = {
-                'statusCode': 404,
-                'body': json.dumps({'error': 'Not Found'}),
-                'headers': {
-                    'Content-Type': 'application/json'
-                }
-            }
-    else:
-        response = {
-            'statusCode': 405,
-            'body': json.dumps({'error': 'Method Not Allowed'}),
-            'headers': {
-                'Content-Type': 'application/json'
-            }
-        }
+    class FakeServer:
+        def __init__(self, method, path, body):
+            self.method = method
+            self.path = path
+            self.body = body
 
-    return response
+        def makefile(self, *args, **kwargs):
+            return self
+
+        def readline(self):
+            return self.body
+
+    class FakeRequestHandler(SimpleRequestHandler):
+        def __init__(self, request, client_address, server):
+            self.rfile = FakeServer(event['httpMethod'], event['path'], event.get('body', ''))
+            self.wfile = server
+            self.client_address = client_address
+            self.server = server
+            self.headers = event.get('headers', {})
+
+    server = FakeServer(event['httpMethod'], event['path'], event.get('body', ''))
+    handler_instance = FakeRequestHandler(server, None, None)
+
+    if event['httpMethod'] == 'GET':
+        handler_instance.do_GET()
+    elif event['httpMethod'] == 'POST':
+        handler_instance.do_POST()
+
+    return server.wfile
+
+if __name__ == '__main__':
+    port = int(os.getenv('PORT', 8000))
+    server_address = ('', port)
+    httpd = HTTPServer(server_address, SimpleRequestHandler)
+    print(f'Starting server on port {port}...')
+    httpd.serve_forever()
