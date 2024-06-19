@@ -31,7 +31,7 @@ class SimpleRequestHandler(BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data)
             
-            # Process the data here
+            # Processa os dados aqui
             response = {'received': data}
             self._set_response()
             self.wfile.write(json.dumps(response).encode('utf-8'))
@@ -41,44 +41,49 @@ class SimpleRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode('utf-8'))
 
 def handler(event, context):
-    # Mock the required attributes and methods for the request handler
-    class FakeServer:
-        def __init__(self, method, path, body):
-            self.method = method
-            self.path = path
-            self.body = body
-            self.headers = {}
-            self.wfile = ""
-
-        def makefile(self, *args, **kwargs):
-            return self
-
-        def readline(self):
-            return self.body.encode('utf-8')
-
-    class FakeRequestHandler(SimpleRequestHandler):
-        def __init__(self, request, client_address, server):
-            self.rfile = request
-            self.wfile = server
-            self.client_address = client_address
-            self.server = server
-            self.headers = {}
-
-    fake_server = FakeServer(event['httpMethod'], event['path'], event.get('body', ''))
-    handler_instance = FakeRequestHandler(fake_server, None, None)
-
     if event['httpMethod'] == 'GET':
-        handler_instance.do_GET()
+        if event['path'] == '/':
+            response = {
+                'statusCode': 200,
+                'body': json.dumps(read_mock(arquivo_mock)),
+                'headers': {
+                    'Content-Type': 'application/json'
+                }
+            }
+        else:
+            response = {
+                'statusCode': 404,
+                'body': json.dumps({'error': 'Not Found'}),
+                'headers': {
+                    'Content-Type': 'application/json'
+                }
+            }
     elif event['httpMethod'] == 'POST':
-        handler_instance.do_POST()
-
-    response = {
-        'statusCode': 200,
-        'headers': {
-            'Content-Type': 'application/json'
-        },
-        'body': handler_instance.wfile
-    }
+        if event['path'] == '/data':
+            data = json.loads(event['body'])
+            response = {
+                'statusCode': 200,
+                'body': json.dumps({'received': data}),
+                'headers': {
+                    'Content-Type': 'application/json'
+                }
+            }
+        else:
+            response = {
+                'statusCode': 404,
+                'body': json.dumps({'error': 'Not Found'}),
+                'headers': {
+                    'Content-Type': 'application/json'
+                }
+            }
+    else:
+        response = {
+            'statusCode': 405,
+            'body': json.dumps({'error': 'Method Not Allowed'}),
+            'headers': {
+                'Content-Type': 'application/json'
+            }
+        }
 
     return response
 
