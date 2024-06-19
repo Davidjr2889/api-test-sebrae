@@ -1,7 +1,7 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json, os
 
-arquivo_mock = '/home/david/Documentos/projetos/sebrae/api_teste/mock.json'
+arquivo_mock = os.path.join(os.path.dirname(__file__), 'mock.json')
 
 def read_mock(arquivo):
     with open(arquivo, 'r', encoding='utf-8') as arq:
